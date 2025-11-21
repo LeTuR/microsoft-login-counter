@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+
+{% block title %}Statistics - Microsoft Login Counter{% endblock %}
+
+{% block content %}
+<div class="stats-container">
+    <h2>Login Statistics</h2>
+
+    {% if stats.total_count == 0 %}
+    <div class="empty-state">
+        <h3>No logins recorded yet</h3>
+        <p>Start using the proxy to track Microsoft logins.</p>
+        <div class="setup-info">
+            <h4>Setup Instructions:</h4>
+            <ol>
+                <li>Configure your browser to use proxy: <code>localhost:8080</code></li>
+                <li>Log into any Microsoft service</li>
+                <li>Refresh this page to see statistics</li>
+            </ol>
+        </div>
+    </div>
+    {% else %}
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-value">{{ stats.today_count }}</div>
+            <div class="stat-label">Today</div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-value">{{ stats.week_count }}</div>
+            <div class="stat-label">This Week</div>
+            <div class="stat-detail">Monday - Sunday</div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-value">{{ stats.month_count }}</div>
+            <div class="stat-label">This Month</div>
+        </div>
+
+        <div class="stat-card highlight">
+            <div class="stat-value">{{ stats.total_count }}</div>
+            <div class="stat-label">All Time</div>
+        </div>
+    </div>
+
+    <div class="details">
+        <h3>Details</h3>
+        <table>
+            <tr>
+                <th>First Login:</th>
+                <td>{{ stats.first_event.strftime('%Y-%m-%d %H:%M:%S UTC') if stats.first_event else 'N/A' }}</td>
+            </tr>
+            <tr>
+                <th>Latest Login:</th>
+                <td>{{ stats.last_event.strftime('%Y-%m-%d %H:%M:%S UTC') if stats.last_event else 'N/A' }}</td>
+            </tr>
+            <tr>
+                <th>Current Period:</th>
+                <td>{{ stats.period_start.strftime('%Y-%m-%d') }} to {{ stats.period_end.strftime('%Y-%m-%d') }}</td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="refresh-notice">
+        <p>Statistics auto-refresh every 30 seconds</p>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+// Auto-refresh every 30 seconds
+setTimeout(function() {
+    location.reload();
+}, 30000);
+</script>
+{% endblock %}

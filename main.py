@@ -62,9 +62,32 @@ def main():
     if upstream_proxy:
         logger.info(f"Using upstream proxy: {upstream_proxy}")
 
+    # Start Flask dashboard in separate thread
+    dashboard_port = config['dashboard']['port']
+    dashboard_address = config['dashboard']['listen_address']
+
+    from src.dashboard.app import create_app
+    import threading
+
+    flask_app = create_app(db_path)
+
+    def run_dashboard():
+        """Run Flask dashboard server."""
+        flask_app.run(
+            host=dashboard_address,
+            port=dashboard_port,
+            debug=False,
+            use_reloader=False
+        )
+
+    dashboard_thread = threading.Thread(target=run_dashboard, daemon=True)
+    dashboard_thread.start()
+
+    logger.info(f"Dashboard started on http://{dashboard_address}:{dashboard_port}")
     logger.info("=" * 60)
     logger.info("Proxy is ready to detect Microsoft logins")
     logger.info(f"Configure your browser to use proxy: {listen_address}:{proxy_port}")
+    logger.info(f"View statistics at: http://{dashboard_address}:{dashboard_port}")
     logger.info("=" * 60)
 
     # Start mitmproxy with addon
