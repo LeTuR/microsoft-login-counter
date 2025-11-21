@@ -1,229 +1,110 @@
-# Microsoft Login Counter
+# Microsoft Login Event Counter
 
-A cross-browser extension for **Microsoft Edge, Chrome, and Firefox** that automatically detects and counts Microsoft authentication events at login.microsoftonline.com.
+A local HTTP proxy that monitors network traffic to detect and count Microsoft authentication events without requiring browser extensions.
+
+## Overview
+
+This tool tracks how often you need to authenticate with Microsoft services by monitoring HTTP traffic patterns through a local proxy. It stores login events in a SQLite database and provides a web dashboard for viewing statistics.
 
 ## Features
 
-- 🔐 **Automatic Detection**: Monitors login.microsoftonline.com and detects successful authentications
-- 📊 **Statistics View**: Display login counts for today, this week, this month, and total
-- 📋 **History View**: Chronological list of all past login events with timestamps
-- 💾 **Local Storage**: All data stored locally in your browser (no external servers)
-- ⚡ **Performance**: < 2 seconds detection latency, < 50MB memory footprint
+- **Login Detection**: Automatically detects Microsoft authentication via HTTP metadata inspection
+- **No Browser Extensions**: Works at the network level - no browser modifications required
+- **Privacy-Focused**: No TLS decryption, monitors HTTP metadata only
+- **Web Dashboard**: View today/week/month statistics and login history
+- **Persistent Storage**: SQLite database survives proxy restarts
+
+## Requirements
+
+- Python 3.11+
+- pip (Python package manager)
 
 ## Quick Start
 
+See `specs/001-microsoft-login-counter/quickstart.md` for detailed setup instructions.
+
 ### Installation
 
-1. **Clone the repository:**
-   ```bash
-   git clone <repository-url>
-   cd microsoft-login-counter
-   ```
+```bash
+# Create virtual environment
+python3 -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
 
-2. **Install dependencies:**
-   ```bash
-   npm install
-   ```
+# Install dependencies
+pip install -r requirements.txt
+```
 
-3. **Build the extension:**
+### Configuration
 
-   **For Chrome/Edge:**
-   ```bash
-   npm run build
-   ```
+Edit `config.yaml` to customize:
+- Proxy port (default: 8080)
+- Dashboard port (default: 8081)
+- Database location
+- Logging settings
 
-   **For Firefox:**
-   ```bash
-   npm run build:firefox
-   ```
+### Running
 
-4. **Load in browser:**
+```bash
+# Start the proxy and dashboard
+python src/main.py
+```
 
-   **Chrome/Edge:**
-   - Open `edge://extensions` (or `chrome://extensions`)
-   - Enable "Developer mode"
-   - Click "Load unpacked"
-   - Select the `dist/` directory
+Then configure your browser or system to use HTTP proxy `localhost:8080`.
 
-   **Firefox:**
-   - Open `about:debugging#/runtime/this-firefox`
-   - Click "Load Temporary Add-on"
-   - Select any file in `dist-firefox/` directory
+Access the dashboard at: http://localhost:8081
 
-   Extension icon appears in toolbar
+## Architecture
 
-### Usage
-
-1. Navigate to any Microsoft service that requires authentication
-2. Sign in through login.microsoftonline.com
-3. Click the extension icon to view statistics and history
+- **Proxy**: mitmproxy-based HTTP proxy for traffic inspection
+- **Storage**: SQLite database for login event persistence
+- **Dashboard**: Flask web application for statistics display
+- **Detection**: Pattern matching on HTTP CONNECT and OAuth callbacks
 
 ## Development
+
+### Running Tests
+
+```bash
+# Run all tests
+pytest
+
+# Run specific test categories
+pytest -m unit
+pytest -m integration
+pytest -m contract
+
+# With coverage
+pytest --cov=src --cov-report=html
+```
 
 ### Project Structure
 
 ```
-microsoft-login-counter/
-├── extension/              # Source code
-│   ├── background/         # Background script (login detection)
-│   ├── popup/              # Popup UI (statistics display)
-│   ├── storage/            # Data persistence layer
-│   ├── lib/                # Shared utilities
-│   └── manifest.json       # Extension configuration
-├── tests/                  # Test suites
-│   ├── contract/           # Browser API contracts
-│   ├── integration/        # End-to-end flows
-│   └── unit/               # Business logic tests
-├── specs/                  # Design documents
-└── dist/                   # Build output (generated)
+src/
+├── proxy/          # mitmproxy addon and detection logic
+├── storage/        # SQLite database and repository
+├── dashboard/      # Flask web dashboard
+├── config/         # Configuration loading
+└── logging/        # Logging setup
+
+tests/
+├── contract/       # Contract tests for HTTP patterns
+├── integration/    # Integration tests for full flows
+└── unit/           # Unit tests for isolated components
 ```
 
-### Available Commands
+## Documentation
 
-```bash
-# Development
-npm run build              # Build for Chrome/Edge
-npm run build:firefox      # Build for Firefox
-npm run build:watch        # Watch mode (rebuild on changes)
-
-# Testing
-npm test                   # Run all tests
-npm test -- --watch        # Auto-rerun tests on changes
-npm test -- --coverage     # Generate coverage report
-
-# Utilities
-npm run clean              # Remove dist/ and dist-firefox/
-npm run type-check         # TypeScript validation only
-```
-
-### Testing
-
-The project follows Test-First Development (TDD):
-
-```bash
-# Run all tests
-npm test
-
-# Run specific test suite
-npm test tests/unit/login-detector.test.ts
-
-# Watch mode for continuous testing
-npm test -- --watch
-```
-
-Test coverage:
-- **Unit tests**: Business logic (date calculations, statistics, event creation)
-- **Contract tests**: Browser API interactions (webNavigation, storage)
-- **Integration tests**: End-to-end login counting flow
-
-### Building for Production
-
-```bash
-npm run build
-```
-
-This compiles TypeScript, bundles code with esbuild, and copies static files to `dist/`.
-
-## Technical Details
-
-### Architecture
-
-- **Language**: TypeScript 5.x (strict mode)
-- **Target Platform**: Microsoft Edge / Chrome (Manifest V3)
-- **Storage**: chrome.storage.local (10MB quota), IndexedDB fallback
-- **Build Tool**: esbuild
-- **Testing**: Jest 29.x with ts-jest and chrome API mocks
-
-### Detection Mechanism
-
-The extension uses `chrome.webNavigation.onCompleted` to monitor:
-- `https://login.microsoftonline.com/*/oauth2/v2.0/authorize` (authorization code flow)
-- `https://login.microsoftonline.com/*/oauth2/v2.0/token` (token endpoint)
-
-A 1-second cooldown prevents duplicate counts from redirect chains.
-
-### Data Model
-
-**LoginEvent:**
-```typescript
-{
-  id: string;           // UUID v4
-  timestamp: number;    // Unix milliseconds (UTC)
-  url: string;          // Full login URL
-  detected_at: number;  // Detection timestamp
-}
-```
-
-**Statistics** (computed on-demand):
-- Today: Logins since midnight (local timezone)
-- This Week: Monday to Sunday (ISO 8601)
-- This Month: 1st to last day of month
-- Total: All time
-
-### Storage Capacity
-
-- **chrome.storage.local**: 10MB quota
-- **Estimated capacity**: ~50,000 events (200 bytes each)
-- **At 10 logins/day**: ~13 years of data
-
-## Troubleshooting
-
-### Extension Not Detecting Logins
-
-**Solutions:**
-1. Check browser console for errors: `edge://extensions` → inspect background page
-2. Verify URL patterns match: Add debug logging to `isLoginSuccess()`
-3. Check permissions in manifest.json: `webNavigation` and `host_permissions`
-
-### Storage Not Persisting
-
-**Solutions:**
-1. Verify chrome.storage.local used (not sessionStorage)
-2. Check for quota errors in console
-3. Inspect storage: `chrome.storage.local.get(null, console.log)`
-
-### Tests Failing
-
-**Solutions:**
-1. Verify jest.config.js sets up chrome mocks
-2. Install @types/chrome: `npm install --save-dev @types/chrome`
-3. Check test environment: `testEnvironment: 'jsdom'` in jest.config.js
-
-## Browser Support
-
-- ✅ **Google Chrome** 100+
-- ✅ **Microsoft Edge** 100+
-- ✅ **Firefox** 109+
-
-See [FIREFOX.md](FIREFOX.md) for Firefox-specific instructions.
-
-## Design Documents
-
-See `specs/001-microsoft-login-counter/` for detailed design:
-
-- **spec.md**: Feature specification with user stories
-- **plan.md**: Implementation plan and technical context
-- **data-model.md**: Data structures and storage schema
-- **contracts/browser-apis.md**: Browser API contracts
-- **tasks.md**: Task breakdown and execution order
-- **quickstart.md**: Development setup guide
-
-## Constitution Principles
-
-This project follows three core principles:
-
-1. **Test-First Development (TDD)**: All tests written before implementation
-2. **Integration & Contract Testing**: Robust testing for browser API interactions
-3. **Pragmatic Simplicity**: YAGNI principles, avoid over-engineering
+- **Specification**: `specs/001-microsoft-login-counter/spec.md`
+- **Implementation Plan**: `specs/001-microsoft-login-counter/plan.md`
+- **Tasks**: `specs/001-microsoft-login-counter/tasks.md`
+- **Data Model**: `specs/001-microsoft-login-counter/data-model.md`
+- **API Contracts**: `specs/001-microsoft-login-counter/contracts/`
 
 ## License
 
-MIT
+[Add license information]
 
-## Version
+## Contributing
 
-**v1.0.0** - Initial release
-
----
-
-For more details, see the [quickstart guide](specs/001-microsoft-login-counter/quickstart.md) or [feature specification](specs/001-microsoft-login-counter/spec.md).
+[Add contribution guidelines]

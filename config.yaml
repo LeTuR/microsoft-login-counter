@@ -1,0 +1,25 @@
+# Microsoft Login Counter Configuration
+
+proxy:
+  port: 8080
+  listen_address: 127.0.0.1
+  # Optional: upstream proxy for corporate networks
+  # upstream_proxy: "http://corporate-proxy:3128"
+
+dashboard:
+  port: 8081
+  listen_address: 127.0.0.1
+
+storage:
+  # Database file path (supports ~ for home directory)
+  database_path: ~/.microsoft-login-counter/events.db
+
+logging:
+  level: INFO  # DEBUG, INFO, WARNING, ERROR, CRITICAL
+  log_dir: ~/.microsoft-login-counter/logs
+  max_size_mb: 10
+  backup_count: 5
+
+detection:
+  # Timeout for OAuth callback detection after CONNECT (seconds)
+  callback_timeout: 60

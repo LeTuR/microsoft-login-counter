@@ -34,8 +34,20 @@
 **Validation Status**: ✅ COMPLETE - All quality checks passed
 
 **Clarification Resolved**:
-- FR-011: Confirmed that every authentication event is counted separately without deduplication
+- FR-012: Confirmed that every authentication event is counted separately without deduplication
 
-**Scope Correction**: This specification correctly focuses on counting login events (frequency), NOT tracking session duration. The previous specification (001-microsoft-login-tracker) was fundamentally misaligned with user requirements and has been replaced.
+**Scope Correction**: This specification correctly focuses on counting login events (frequency), NOT tracking session duration.
 
-**Next Steps**: Specification is ready for `/speckit.clarify` or `/speckit.plan`
+**Implementation Constraint Update (2025-11-21)**:
+- Solution MUST be proxy-based or equivalent network-level solution
+- Browser extensions are explicitly EXCLUDED due to company policy restrictions
+- Specification updated to reflect proxy-based approach in:
+  - User Story 1: Detection via proxy traffic inspection
+  - FR-001, FR-002, FR-013: Network-level detection requirements
+  - Success Criteria SC-007, SC-008: Proxy performance and policy compliance
+  - Assumptions 7, 9, 10, 11: Proxy architecture, network config, TLS inspection, policy compliance
+  - Edge Cases: Added network interruption, proxy bypass, HTTPS/TLS considerations
+
+**Technology-Agnostic Validation**: While "proxy" is mentioned as the required approach (per user constraint), no specific proxy technology, programming language, database, or framework is specified. The specification remains implementation-agnostic.
+
+**Next Steps**: Specification is ready for `/speckit.plan` to develop technical implementation plan
