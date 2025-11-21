@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Microsoft Login Counter</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Microsoft Login Counter</h1>
+    </header>
+
+    <main>
+      <!-- Tab Navigation -->
+      <div class="tabs">
+        <button id="tab-statistics" class="tab active">Statistics</button>
+        <button id="tab-history" class="tab">History</button>
+      </div>
+
+      <!-- Statistics View -->
+      <div id="view-statistics" class="view active">
+        <div id="statistics-content">
+          <!-- Statistics will be injected here -->
+          <div class="stat-card">
+            <div class="stat-label">Today</div>
+            <div class="stat-value" id="stat-today">-</div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-label">This Week</div>
+            <div class="stat-value" id="stat-week">-</div>
+            <div class="stat-period" id="stat-week-period"></div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-label">This Month</div>
+            <div class="stat-value" id="stat-month">-</div>
+            <div class="stat-period" id="stat-month-period"></div>
+          </div>
+
+          <div class="stat-card total">
+            <div class="stat-label">Total</div>
+            <div class="stat-value" id="stat-total">-</div>
+          </div>
+        </div>
+
+        <!-- Empty State -->
+        <div id="empty-state" class="empty-state hidden">
+          <p>No login events recorded yet.</p>
+          <p class="help-text">Sign in to Microsoft services to start tracking.</p>
+        </div>
+
+        <!-- Loading State -->
+        <div id="loading-state" class="loading-state">
+          <p>Loading...</p>
+        </div>
+      </div>
+
+      <!-- History View -->
+      <div id="view-history" class="view">
+        <div id="history-content">
+          <ul id="history-list" class="history-list">
+            <!-- History items will be injected here -->
+          </ul>
+        </div>
+
+        <!-- Empty History State -->
+        <div id="history-empty-state" class="empty-state hidden">
+          <p>No login events recorded yet.</p>
+        </div>
+
+        <!-- Loading History State -->
+        <div id="history-loading-state" class="loading-state">
+          <p>Loading...</p>
+        </div>
+      </div>
+    </main>
+
+    <footer>
+      <p class="version">v1.0.0</p>
+    </footer>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
