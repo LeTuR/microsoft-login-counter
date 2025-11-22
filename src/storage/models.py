@@ -2,6 +2,7 @@
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Optional
+from enum import Enum
 
 
 @dataclass
@@ -57,4 +58,39 @@ class LoginStatistics:
             'period_end': self.period_end.isoformat() + 'Z',
             'first_event': self.first_event.isoformat() + 'Z' if self.first_event else None,
             'last_event': self.last_event.isoformat() + 'Z' if self.last_event else None
+        }
+
+
+class TimePeriod(Enum):
+    """Time period filter options."""
+
+    LAST_24H = "24h"
+    LAST_7D = "7d"
+    LAST_30D = "30d"
+    ALL_TIME = "all"
+
+
+@dataclass
+class TimePeriodFilter:
+    """Time period filter for graph data queries."""
+
+    period: TimePeriod
+    start_date: datetime
+    end_date: datetime
+
+
+@dataclass
+class GraphDataPoint:
+    """Aggregated data point for graph visualization."""
+
+    bucket: str
+    count: int
+    timestamp: datetime
+
+    def to_dict(self) -> dict:
+        """Convert to dictionary for JSON serialization."""
+        return {
+            'bucket': self.bucket,
+            'count': self.count,
+            'timestamp': self.timestamp.strftime('%Y-%m-%dT%H:%M:%SZ')
         }

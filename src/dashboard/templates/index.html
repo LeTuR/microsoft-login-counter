@@ -43,6 +43,18 @@
         </div>
     </div>
 
+    <div class="graph-section">
+        <h3>Login Trends</h3>
+        <div class="period-filters">
+            <button class="filter-btn active" data-period="7d">Last 7 Days</button>
+            <button class="filter-btn" data-period="30d">Last 30 Days</button>
+            <button class="filter-btn" data-period="all">All Time</button>
+        </div>
+        <div class="graph-container">
+            <canvas id="login-graph"></canvas>
+        </div>
+    </div>
+
     <div class="details">
         <h3>Details</h3>
         <table>
@@ -62,15 +74,10 @@
     </div>
 
     <div class="refresh-notice">
-        <p>Statistics auto-refresh every 30 seconds</p>
+        <p>Statistics auto-refresh every 5 seconds</p>
     </div>
     {% endif %}
 </div>
 
-<script>
-// Auto-refresh every 30 seconds
-setTimeout(function() {
-    location.reload();
-}, 30000);
-</script>
+<script src="{{ url_for('static', filename='graph.js') }}"></script>
 {% endblock %}

@@ -4,7 +4,7 @@ from typing import List
 import logging
 
 from src.storage.database import Database
-from src.storage.models import LoginEvent
+from src.storage.models import LoginEvent, TimePeriodFilter, GraphDataPoint
 
 logger = logging.getLogger(__name__)
 
@@ -120,3 +120,91 @@ class Repository:
         if self._db is not None:
             self._db.close()
             self._db = None
+
+
+def determine_aggregation_level(start_date: datetime, end_date: datetime) -> str:
+    """
+    Determine appropriate aggregation level based on date range.
+
+    Aggregation rules (updated for bar chart):
+    - ≤90 days: Daily buckets
+    - >90 days: Weekly buckets
+
+    Args:
+        start_date: Start of time period (UTC)
+        end_date: End of time period (UTC)
+
+    Returns:
+        Aggregation level: "day" or "week"
+    """
+    days_diff = (end_date - start_date).days
+
+    if days_diff <= 90:
+        return 'day'
+    else:
+        return 'week'
+
+
+def get_aggregated_graph_data(database_path: str, time_filter: TimePeriodFilter) -> List[GraphDataPoint]:
+    """
+    Query login_events with aggregation based on time period.
+
+    Implements two-tier density-based aggregation:
+    - Daily: For recent data (≤90 days)
+    - Weekly: For long ranges (>90 days)
+
+    Args:
+        database_path: Path to SQLite database
+        time_filter: TimePeriodFilter with start_date, end_date, and period
+
+    Returns:
+        List of GraphDataPoint objects with aggregated counts
+    """
+    # 1. Determine aggregation level
+    aggregation = determine_aggregation_level(time_filter.start_date, time_filter.end_date)
+
+    if aggregation == 'day':
+        sql_format = '%Y-%m-%d'
+    else:  # 'week'
+        sql_format = '%Y-W%W'
+
+    # 2. Execute aggregation query
+    db = Database(database_path)
+    db.connect()
+
+    query = """
+        SELECT strftime(?, timestamp) as bucket,
+               COUNT(*) as count,
+               MIN(timestamp) as bucket_start
+        FROM login_events
+        WHERE timestamp >= ? AND timestamp <= ?
+        GROUP BY bucket
+        ORDER BY bucket
+    """
+
+    cursor = db.connection.cursor()
+    cursor.execute(
+        query,
+        [
+            sql_format,
+            time_filter.start_date.strftime('%Y-%m-%dT%H:%M:%SZ'),
+            time_filter.end_date.strftime('%Y-%m-%dT%H:%M:%SZ')
+        ]
+    )
+
+    rows = cursor.fetchall()
+    db.close()
+
+    # 3. Convert to GraphDataPoint objects
+    data_points = [
+        GraphDataPoint(
+            bucket=row['bucket'],
+            count=row['count'],
+            timestamp=datetime.strptime(row['bucket_start'], '%Y-%m-%dT%H:%M:%SZ')
+        )
+        for row in rows
+    ]
+
+    logger.info(f"Retrieved {len(data_points)} aggregated data points (level={aggregation}, period={time_filter.period.value})")
+
+    return data_points
