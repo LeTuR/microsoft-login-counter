@@ -1,0 +1,145 @@
+openapi: 3.0.3
+info:
+  title: Microsoft Login Counter - Statistics API
+  description: |
+    API contract for the auto-refresh statistics endpoint.
+    This endpoint provides aggregated login statistics for different time periods.
+  version: 1.0.0
+  contact:
+    name: Microsoft Login Counter Team
+
+servers:
+  - url: http://localhost:8081
+    description: Local development server
+
+paths:
+  /api/statistics:
+    get:
+      summary: Get login statistics
+      description: |
+        Returns aggregated login statistics for today, this week, this month, and all-time.
+        Time periods are calculated using server UTC time to ensure consistency.
+
+        This endpoint is designed to be polled every 5 seconds by the dashboard frontend
+        for auto-refresh functionality.
+      operationId: getStatistics
+      tags:
+        - Statistics
+      responses:
+        '200':
+          description: Successfully retrieved statistics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginStatistics'
+              examples:
+                typical:
+                  summary: Typical statistics response
+                  value:
+                    today_count: 5
+                    week_count: 23
+                    month_count: 67
+                    total_count: 420
+                    period_start: "2025-11-22T00:00:00Z"
+                    period_end: "2025-11-22T23:59:59.999999Z"
+                    first_event: "2025-11-15T10:30:00Z"
+                    last_event: "2025-11-22T14:22:00Z"
+                no_events:
+                  summary: No login events recorded
+                  value:
+                    today_count: 0
+                    week_count: 0
+                    month_count: 0
+                    total_count: 0
+                    period_start: "2025-11-22T00:00:00Z"
+                    period_end: "2025-11-22T23:59:59.999999Z"
+                    first_event: null
+                    last_event: null
+        '500':
+          description: Internal server error (database unavailable or computation failed)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Internal server error"
+
+components:
+  schemas:
+    LoginStatistics:
+      type: object
+      required:
+        - today_count
+        - week_count
+        - month_count
+        - total_count
+        - period_start
+        - period_end
+      properties:
+        today_count:
+          type: integer
+          minimum: 0
+          description: Number of login events today (current calendar day UTC)
+          example: 5
+        week_count:
+          type: integer
+          minimum: 0
+          description: Number of login events this week (Monday-Sunday, ISO week)
+          example: 23
+        month_count:
+          type: integer
+          minimum: 0
+          description: Number of login events this month (current calendar month UTC)
+          example: 67
+        total_count:
+          type: integer
+          minimum: 0
+          description: Total number of login events all-time
+          example: 420
+        period_start:
+          type: string
+          format: date-time
+          description: Start of current day period (midnight UTC, ISO 8601 with 'Z' suffix)
+          example: "2025-11-22T00:00:00Z"
+        period_end:
+          type: string
+          format: date-time
+          description: End of current day period (23:59:59.999999 UTC, ISO 8601 with 'Z' suffix)
+          example: "2025-11-22T23:59:59.999999Z"
+        first_event:
+          type: string
+          format: date-time
+          nullable: true
+          description: Timestamp of first login event ever recorded (ISO 8601 with 'Z' suffix), null if no events
+          example: "2025-11-15T10:30:00Z"
+        last_event:
+          type: string
+          format: date-time
+          nullable: true
+          description: Timestamp of most recent login event (ISO 8601 with 'Z' suffix), null if no events
+          example: "2025-11-22T14:22:00Z"
+      description: |
+        Aggregated login statistics for different time periods.
+
+        **Time Period Definitions**:
+        - **Today**: Current calendar day in UTC (midnight to 23:59:59.999999)
+        - **This Week**: Current ISO week, Monday-Sunday
+        - **This Month**: Current calendar month in UTC
+        - **All Time**: No time filter, all events since first recorded event
+
+        **Invariants**:
+        - All counts are non-negative integers
+        - `total_count` >= `month_count` >= `week_count` (logically)
+        - `period_start` <= `period_end`
+        - If `first_event` exists, `first_event` <= `last_event`
+        - Time calculations use server UTC time (FR-004 from spec)
+
+    Error:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          description: Human-readable error message
+          example: "Internal server error"
