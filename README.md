@@ -6,6 +6,8 @@ A local HTTP proxy that monitors network traffic to detect and count Microsoft a
 
 This tool tracks how often you need to authenticate with Microsoft services by monitoring HTTP traffic patterns through a local proxy. It stores login events in a SQLite database and provides a web dashboard for viewing statistics.
 
+![Dashboard Overview](./figures/dashboard_overview.png)
+
 ## Features
 
 - **Login Detection**: Automatically detects Microsoft authentication via HTTP metadata inspection
