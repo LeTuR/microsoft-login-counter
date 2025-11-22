@@ -29,6 +29,25 @@ class LoginDetectorAddon:
         self.dedup_window = 10  # Don't record same session twice within 10 seconds
         logger.info(f"LoginDetectorAddon initialized with database: {database_path}")
 
+    def http_connect(self, flow: http.HTTPFlow):
+        """
+        Handle HTTP CONNECT requests.
+
+        Tracks sessions that connect to Microsoft login domains.
+
+        Args:
+            flow: mitmproxy HTTP flow object
+        """
+        # Check if this is a CONNECT to Microsoft login domain
+        if is_microsoft_login_connect(flow):
+            # Get client session key
+            client_addr = flow.client_conn.address
+            session_key = f"{client_addr[0]}:{client_addr[1]}"
+
+            # Track this session
+            self.session_tracker.track_session(session_key)
+            logger.info(f"✓ Tracked Microsoft login CONNECT from {session_key}")
+
     def request(self, flow: http.HTTPFlow):
         """
         Handle HTTP requests.
@@ -46,14 +65,48 @@ class LoginDetectorAddon:
         session_key = f"{client_addr[0]}:{client_addr[1]}"
 
         # Check if this is a request to Microsoft login domain
-        if flow.request.host and (flow.request.host == 'login.microsoftonline.com' or
-                                   flow.request.host.endswith('.login.microsoftonline.com')):
+        if (hasattr(flow.request, 'host') and
+            isinstance(flow.request.host, str) and
+            flow.request.host and
+            (flow.request.host == 'login.microsoftonline.com' or
+             flow.request.host.endswith('.login.microsoftonline.com'))):
             # Track this session
             self.session_tracker.track_session(session_key)
             logger.info(f"✓ Tracked Microsoft login request from {session_key}")
 
+        # Check for OAuth callback
+        if is_oauth_callback(flow):
+            logger.info(f"OAuth callback detected from {session_key}, URL: {flow.request.url}")
+
+            if self.session_tracker.is_active(session_key):
+                # Check if we already recorded this session recently (deduplication)
+                import time
+                current_time = time.time()
+
+                if session_key in self.recorded_sessions:
+                    last_recorded = self.recorded_sessions[session_key]
+                    if current_time - last_recorded < self.dedup_window:
+                        logger.info(f"Skipping duplicate login event for {session_key} (within {self.dedup_window}s window)")
+                        return
+
+                # Record login event
+                self._record_login_event('oauth_callback')
+
+                # Mark this session as recorded
+                self.recorded_sessions[session_key] = current_time
+
+                # Remove session after successful match
+                self.session_tracker.remove_session(session_key)
+
+                logger.info(f"✓ Recorded OAuth callback login event for session {session_key}")
+
+                # Cleanup old recorded sessions (keep dict from growing indefinitely)
+                self._cleanup_recorded_sessions(current_time)
+            else:
+                logger.info(f"OAuth callback from {session_key} but no active session found")
+
         # Check for INTERACTIVE login (user entering credentials)
-        if is_interactive_login(flow):
+        elif is_interactive_login(flow):
             logger.info(f"Interactive login detected from {session_key}, URL: {flow.request.url}")
 
             if self.session_tracker.is_active(session_key):
