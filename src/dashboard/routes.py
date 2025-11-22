@@ -119,4 +119,19 @@ def register_routes(app: Flask):
             logger.error(f"Error getting graph data: {e}")
             return jsonify({'error': 'Internal server error'}), 500
 
+    @app.route('/api/statistics')
+    def statistics():
+        """
+        Get current login statistics.
+
+        Returns:
+            JSON response with login counts for today/week/month/all-time
+        """
+        stats = get_statistics()
+
+        if stats is None:
+            return jsonify({'error': 'Internal server error'}), 500
+
+        return jsonify(stats.to_dict()), 200
+
     logger.info("Dashboard routes registered")
